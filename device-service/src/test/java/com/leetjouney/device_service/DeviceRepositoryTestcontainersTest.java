@@ -6,8 +6,8 @@ import com.leetjouney.device_service.repository.DeviceRepository;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
@@ -57,7 +57,7 @@ class DeviceRepositoryTestcontainersTest {
         deviceRepository.save(device1);
         deviceRepository.save(device2);
 
-        List<Device> userDevices = deviceRepository.findByUserId(101L);
+        List<Device> userDevices = deviceRepository.findAllByUserId(101L);
         Assertions.assertEquals(2, userDevices.size());
     }
 }
