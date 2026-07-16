@@ -55,21 +55,44 @@ graph TD
 
 ---
 
-## 🚀 Quick Start & Docker Compose Deployment
+## 🚀 Step-by-Step Setup & Running Guide
 
-### Prerequisites
-- **Java 21 JDK** installed locally
-- **Maven 3.9+** (or use included `./mvnw`)
-- **Docker & Docker Desktop** (with minimum 6GB RAM allocated for Kafka, Keycloak, and MySQL containers)
+Follow these exact steps to launch the entire multi-module ecosystem, spin up containerized infrastructure, run automated Testcontainers verification, and interactively test live microservices:
 
-### 1. Launch Infrastructure via Docker Compose
-Run the following command from the project root to spin up MySQL, Keycloak (pre-configured `het-security-realm`), Prometheus, and Grafana:
+### Step 1: System Prerequisites Check
+Ensure your local environment meets the following requirements before starting:
+- **Java 21 JDK** (`java -version` should show `21.x`)
+- **Maven 3.9+** (or use the included `./mvnw` / `.\mvnw.cmd` wrapper)
+- **Docker & Docker Desktop** running locally with at least **6GB RAM** allocated (required for MySQL, KRaft Kafka, InfluxDB, Keycloak, Mailpit, and Prometheus containers).
+
+---
+
+### Step 2: Spin Up Infrastructure Containers (Docker Compose)
+From the root workspace directory, start all background dependencies and data stores:
 ```bash
 docker-compose up -d
 ```
 
-### 2. Build All Services Across the Parent POM
-To compile, verify, and run unit & Testcontainers integration suites across all 8 modules (parent + 7 services):
+Verify that all 8 infrastructure containers are `Up` and `healthy`:
+```bash
+docker ps
+```
+| Container Name | Port(s) | Role & Description |
+| :--- | :--- | :--- |
+| `mysql` (`keycloak-mysql` & `mysql`) | `3306` | Relational persistence for `user-service`, `device-service`, and `alert-service` (auto-initialized via `init.sql`). |
+| `kafka` | `9092, 9094` | KRaft-based event broker for real-time telemetry streaming (`energy-usage-events`, `alert-events`). |
+| `kafka-ui` | `8070` | Web UI for inspecting Kafka topics, consumer groups, and message payloads ([http://localhost:8070](http://localhost:8070)). |
+| `influxdb` | `8086` | Time-series database for high-frequency usage metrics ingested by `usage-service`. |
+| `keycloak` | `8091` | OAuth2 / OIDC authentication server pre-configured with `het-security-realm` ([http://localhost:8091](http://localhost:8091)). |
+| `mailpit` | `8025 / 1025` | Local SMTP capture server & UI for simulated email alert dispatches ([http://localhost:8025](http://localhost:8025)). |
+| `prometheus` | `9090` | Time-series scraper collecting `/actuator/prometheus` metrics ([http://localhost:9090](http://localhost:9090)). |
+| `grafana` | `3000` | Observability dashboards connected to Prometheus (`admin` / `admin` at [http://localhost:3000](http://localhost:3000)). |
+
+---
+
+### Step 3: Verify & Build the Ecosystem (With Testcontainers)
+Before running locally, verify all 8 reactor modules (including real Dockerized Testcontainers suites for MySQL, Kafka, and Ollama AI) across the multi-module `home-energy-tracker-parent`:
+
 ```bash
 # On Windows PowerShell
 .\mvnw.cmd clean verify -DskipTests=false
@@ -77,6 +100,86 @@ To compile, verify, and run unit & Testcontainers integration suites across all 
 # On Linux/macOS
 ./mvnw clean verify -DskipTests=false
 ```
+When `BUILD SUCCESS` appears across all 8 modules, compiled Spring Boot runnable `.jar` files are placed inside each `target/` directory.
+
+---
+
+### Step 4: Start All Microservices
+You can start the microservices locally using either `mvn spring-boot:run` in separate terminal windows, or by running the generated `.jar` files. Start `api-gateway` along with the core services you wish to run:
+
+#### Option A: Running via Maven Plugin (`spring-boot:run`)
+Open separate terminal tabs from the project root:
+```bash
+# Terminal 1: API Gateway (Port 8080)
+.\mvnw.cmd spring-boot:run -pl :api-gateway
+
+# Terminal 2: User Service (Port 8086)
+.\mvnw.cmd spring-boot:run -pl :user-service
+
+# Terminal 3: Device Service (Port 8081)
+.\mvnw.cmd spring-boot:run -pl :device-service
+
+# Terminal 4: Ingestion Service (Port 8082)
+.\mvnw.cmd spring-boot:run -pl :ingestion-service
+
+# Terminal 5: Usage Service (Port 8083)
+.\mvnw.cmd spring-boot:run -pl :usage-service
+
+# Terminal 6: Alert Service (Port 8084)
+.\mvnw.cmd spring-boot:run -pl :alert-service
+
+# Terminal 7: Insight Service (Port 8085)
+.\mvnw.cmd spring-boot:run -pl :insight-service
+```
+
+#### Option B: Running Compiled JARs (`java -jar`)
+```bash
+java -jar api-gateway/api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar
+java -jar user-service/target/user-service-0.0.1-SNAPSHOT.jar
+java -jar device-service/target/device-service-0.0.1-SNAPSHOT.jar
+```
+
+---
+
+### Step 5: Interactive API Testing & Token Authentication
+
+![API Gateway & Public Network](diagrams/diagram-showing-gateway-in-public-network.png)
+![Circuit Breaker in API Gateway](diagrams/circuit-breaker-in-api-gateway.png)
+
+#### 1. Why `http://localhost:8080/` Returns `401 Unauthorized`
+The API Gateway uses **Keycloak OAuth2 Resource Server Security**. If you visit the root URL (`http://localhost:8080/`) directly in your browser without a `Bearer <token>` Authorization header, Keycloak rejects the request.
+
+#### 2. Accessing Public & Interactive Swagger Docs
+In `application.properties`, we explicitly excluded Swagger UI and Actuator endpoints from OAuth2 requirements so you can test endpoints interactively in your browser:
+- 👉 **Unified API Gateway Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)  
+  *(Select User, Device, Ingestion, Usage, Alert, or Insight Service directly from the top dropdown)*
+- 👉 **API Gateway Actuator Health**: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
+
+#### 3. Generating a Keycloak JWT Access Token (`cURL` / `Postman`)
+To invoke protected API routes (e.g., `POST /api/v1/user`), generate an `access_token` from Keycloak (`het-security-realm`):
+```bash
+curl -X POST "http://localhost:8091/realms/het-security-realm/protocol/openid-connect/token" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "client_id=het-gateway-client" \
+     -d "client_secret=het-gateway-secret" \
+     -d "username=admin" \
+     -d "password=admin" \
+     -d "grant_type=password" \
+     -d "scope=openid profile email"
+```
+Copy the `access_token` string from the JSON response and attach it to your API requests via the header:  
+`Authorization: Bearer <access_token>`
+
+---
+
+### Step 6: Observability & Monitoring Dashboards
+
+![Observability with Prometheus and Grafana](diagrams/observability-with-prometheus-and-grafana.png)
+
+The ecosystem is fully instrumented with Spring Boot Actuator, Micrometer Prometheus registries, and Grafana visualization dashboards:
+- **Prometheus Scrape Targets**: [http://localhost:9090/targets](http://localhost:9090/targets) (automatically scrapes `/actuator/prometheus` across every microservice port `8080-8086`).
+- **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (`admin` / `admin`). Pre-provisioned datasource automatically connects to Prometheus.
+- **Mailpit Email UI**: [http://localhost:8025](http://localhost:8025) (inspect simulated email notifications dispatched by `alert-service`).
 
 ---
 
@@ -91,49 +194,3 @@ Every microservice includes dedicated Testcontainers integration tests that spin
 - `AlertRepositoryTestcontainersTest` (`alert-service`): Verifies threshold violation audit trail storage inside containerized MySQL.
 - `InsightServiceOllamaTestcontainersTest` (`insight-service`): Verifies local LLM container runtime health and Spring AI dynamic base-url injection.
 
----
-
-## 🔐 Keycloak Security & Authentication Workflow
-
-![API Gateway & Public Network](diagrams/diagram-showing-gateway-in-public-network.png)
-![Circuit Breaker in API Gateway](diagrams/circuit-breaker-in-api-gateway.png)
-
-The API Gateway (`http://localhost:8080`) secures all downstream routes using **OAuth2 / OpenID Connect (OIDC)** tokens issued by Keycloak (`http://localhost:8091`).
-
-### Generating an Access Token via Postman / cURL
-Send a `POST` request to Keycloak's token endpoint using the pre-imported client credentials (`het-gateway-client` / `het-gateway-secret`):
-```bash
-curl -X POST "http://localhost:8091/realms/het-security-realm/protocol/openid-connect/token" \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "client_id=het-gateway-client" \
-     -d "client_secret=het-gateway-secret" \
-     -d "username=admin" \
-     -d "password=admin" \
-     -d "grant_type=password" \
-     -d "scope=openid profile email"
-```
-Copy the returned `access_token` and use it in your requests via `Authorization: Bearer <access_token>`.
-
----
-
-## 📊 Unified OpenAPI / Swagger UI & Observability
-
-![Observability with Prometheus and Grafana](diagrams/observability-with-prometheus-and-grafana.png)
-
-### 1. Unified Swagger UI Aggregator (API Gateway)
-Access all 6 microservice REST APIs from a single interactive interface:
-- **Unified Swagger Dashboard**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- Select `User Service`, `Device Service`, `Ingestion Service`, `Usage Service`, `Insight Service`, or `Alert Service` directly from the top dropdown.
-
-### 2. Prometheus & Grafana Monitoring Pipeline
-- **Prometheus Scrape Targets**: [http://localhost:9090/targets](http://localhost:9090/targets) (automatically scrapes `/actuator/prometheus` across every microservice port `8080-8086`).
-- **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (`admin` / `admin`). Pre-provisioned datasource automatically connects to Prometheus.
-
----
-
-## 📈 Git Commit History & Professional Hygiene
-This project was constructed using an atomic commit strategy with **58 Git commits** following standard Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`):
-```bash
-git log --oneline
-```
-Every commit represents a self-contained, buildable increment of domain entities, JPA repositories, Kafka event handlers, REST controllers, actuator configs, Testcontainers suites, and architectural diagrams across a 9-phase enterprise engineering roadmap.
