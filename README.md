@@ -230,17 +230,3 @@ Every microservice includes dedicated Testcontainers integration tests that spin
 - `InsightServiceOllamaTestcontainersTest` (`insight-service`): Verifies local LLM container runtime health and Spring AI dynamic base-url injection.
 
 ---
-
-## 🌿 Complete Git Commit Track Record (`frontend` Branch)
-
-The repository features **66 atomic, conventional Git commits** across the system lifecycle. Commits 60 through 66 were developed on and pushed to the dedicated **`frontend`** branch:
-
-| Commit SHA | Commit Message | Layer / Feature |
-| :--- | :--- | :--- |
-| `f228f11` | `fix(frontend): update Keycloak OAuth2 token client credentials to energy-tracker-client` | Keycloak Client Fix |
-| `1f02382` | `feat(docker): introduce docker-compose.prod.yml for production container orchestration across Frontend and all 7 Microservices` | Production Docker Suite |
-| `0fd05ec` | `feat(frontend): add multi-stage Dockerfile and Nginx SPA routing with API reverse proxy configuration` | Frontend Nginx & Docker |
-| `bf748a4` | `feat(frontend): create AnalyticsCenter time-series charts and local Ollama Spring AI advisory chat interface` | Analytics & AI UI Views |
-| `6c6055c` | `feat(frontend): implement SystemOverview health telemetry card grid and DeviceManager Kafka burst controls` | Cluster & IoT UI Views |
-| `bd0bc0f` | `feat(frontend): initialize React 19 SPA scaffolding with glassmorphic CSS tokens and Keycloak Navbar` | React SPA Foundation |
-| `b62123a` | `feat(api-gateway): configure CORS preflight and Spring Security options for SPA accessibility` | Gateway Security / CORS |
