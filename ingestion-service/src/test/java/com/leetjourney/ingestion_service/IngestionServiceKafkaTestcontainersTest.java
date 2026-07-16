@@ -30,7 +30,7 @@ class IngestionServiceKafkaTestcontainersTest {
 
     @Test
     void testPublishEnergyUsageEvent() {
-        EnergyUsageDto dto = new EnergyUsageDto(101L, 2.5);
-        Assertions.assertDoesNotThrow(() -> ingestionService.publishEnergyUsageEvent(dto));
+        EnergyUsageDto dto = new EnergyUsageDto(101L, 2.5, java.time.Instant.now());
+        Assertions.assertDoesNotThrow(() -> ingestionService.ingestEnergyUsage(dto));
     }
 }
