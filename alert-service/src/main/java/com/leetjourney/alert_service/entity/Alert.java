@@ -24,6 +24,10 @@ public class Alert {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long userId;
+    private String message;
+    private Double threshold;
+    private Double actualUsage;
+    private LocalDateTime timestamp;
     private LocalDateTime createdAt;
     private boolean sent;
 }
