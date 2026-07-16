@@ -49,3 +49,5 @@ logs/
 *.zip
 volume-data/
 .gemini/
+docker/kafka_data/
+docker/mysql_data/
