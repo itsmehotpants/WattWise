@@ -1,6 +1,6 @@
 # 🏡 Home Energy Tracker Microservices Ecosystem
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4%2B-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4%2B%20%2F%204.0%2B-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java 21](https://img.shields.io/badge/Java-21-blue.svg)](https://openjdk.org/projects/jdk/21/)
 [![Testcontainers](https://img.shields.io/badge/Testcontainers-Enabled-orange.svg)](https://testcontainers.com/)
 [![Ollama & Spring AI](https://img.shields.io/badge/Spring%20AI-Ollama-purple.svg)](https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html)
@@ -15,12 +15,12 @@ An enterprise-grade, distributed IoT energy tracking and AI recommendations plat
 ```mermaid
 graph TD
     User["👥 Client / Postman"] -->|OAuth2 / Bearer Token| GW["🌐 API Gateway (:8080)"]
-    GW -->|/api/v1/user| US["👤 User Service (:8081)"]
-    GW -->|/api/v1/device| DS["🔌 Device Service (:8082)"]
-    GW -->|/api/v1/ingest| IS["⚡ Ingestion Service (:8083)"]
-    GW -->|/api/v1/usage| UGS["📈 Usage Service (:8084)"]
+    GW -->|/api/v1/user| US["👤 User Service (:8086)"]
+    GW -->|/api/v1/device| DS["🔌 Device Service (:8081)"]
+    GW -->|/api/v1/ingestion| IS["⚡ Ingestion Service (:8082)"]
+    GW -->|/api/v1/usage| UGS["📈 Usage Service (:8083)"]
+    GW -->|/api/v1/alert| AS["🚨 Alert Service (:8084)"]
     GW -->|/api/v1/insight| INS["🤖 Insight Service (:8085)"]
-    GW -->|/api/v1/alert| AS["🚨 Alert Service (:8086)"]
 
     IS -->|Publish EnergyUsageEvent| KAFKA[["🔥 Apache Kafka (:9092)"]]
     KAFKA -->|Consume & Aggregate| UGS
@@ -43,12 +43,12 @@ graph TD
 | Service | Port | Description | Technology & Datastore |
 | :--- | :--- | :--- | :--- |
 | **API Gateway** | `8080` | Spring Cloud Gateway MVC entry point, OAuth2 JWT resource server, unified Swagger UI Docs aggregator. | Spring Cloud Gateway MVC |
-| **User Service** | `8081` | User lifecycle management, alert configuration (`alerting=true`, `energyAlertingThreshold=1500`), Flyway schema migrations. | Spring Data JPA, MySQL |
-| **Device Service** | `8082` | IoT device inventory management (`HVAC`, `LIGHTING`, `APPLIANCE`, `SOLAR`) linked to users. | Spring Data JPA, MySQL |
-| **Ingestion Service** | `8083` | High-throughput telemetry ingestion with continuous and multi-threaded parallel simulation engines. | Kafka Producer (`energy-usage-events`) |
-| **Usage Service** | `8084` | Real-time Kafka consumer, time-series persistence, hourly aggregation, threshold breach detection (`alert-events`). | Kafka Consumer, InfluxDB |
+| **Device Service** | `8081` | IoT device inventory management (`HVAC`, `LIGHTING`, `APPLIANCE`, `SOLAR`) linked to users. | Spring Data JPA, MySQL |
+| **Ingestion Service** | `8082` | High-throughput telemetry ingestion with continuous and multi-threaded parallel simulation engines. | Kafka Producer (`energy-usage-events`) |
+| **Usage Service** | `8083` | Real-time Kafka consumer, time-series persistence, multi-day aggregation, threshold breach detection. | Kafka Consumer, InfluxDB |
+| **Alert Service** | `8084` | Alert violation processing (`alert-events` consumer), DB persistence, and Mailpit email dispatching. | Kafka Consumer, MySQL, JavaMailSender |
 | **Insight Service** | `8085` | AI savings recommendation engine integrating local Ollama (`llama3` / `mistral`) via Spring AI. | Spring AI, Ollama |
-| **Alert Service** | `8086` | Alert violation processing (`alert-events` consumer), DB persistence, and Mailpit email dispatching. | Kafka Consumer, MySQL, JavaMailSender |
+| **User Service** | `8086` | User lifecycle management, alert configuration (`alerting=true`, `energyAlertingThreshold=15.0`), Flyway schema migrations. | Spring Data JPA, MySQL |
 
 ---
 
@@ -66,7 +66,7 @@ docker-compose up -d
 ```
 
 ### 2. Build All Services Across the Parent POM
-To compile, verify, and run unit & Testcontainers integration suites across all 7 modules:
+To compile, verify, and run unit & Testcontainers integration suites across all 8 modules (parent + 7 services):
 ```bash
 # On Windows PowerShell
 .\mvnw.cmd clean verify -DskipTests=false
@@ -82,7 +82,7 @@ To compile, verify, and run unit & Testcontainers integration suites across all 
 Every microservice includes dedicated Testcontainers integration tests that spin up real Docker containers (`mysql:8.0`, `confluentinc/cp-kafka:7.6.0`, `ollama/ollama:latest`) to verify full data persistence, event streaming, and AI endpoint connectivity:
 
 - `UserRepositoryTestcontainersTest` (`user-service`): Verifies MySQL container JPA persistence and custom finders (`findByEmail`).
-- `DeviceRepositoryTestcontainersTest` (`device-service`): Verifies relationship mappings and device type filtering.
+- `DeviceRepositoryTestcontainersTest` (`device-service`): Verifies relationship mappings and device type filtering (`findAllByUserId`).
 - `IngestionServiceKafkaTestcontainersTest` (`ingestion-service`): Verifies real-time producer connectivity against a containerized Kafka broker.
 - `UsageServiceKafkaTestcontainersTest` (`usage-service`): Verifies consumer bootstrap configurations and dynamic property overrides.
 - `AlertRepositoryTestcontainersTest` (`alert-service`): Verifies threshold violation audit trail storage inside containerized MySQL.
@@ -118,14 +118,14 @@ Access all 6 microservice REST APIs from a single interactive interface:
 - Select `User Service`, `Device Service`, `Ingestion Service`, `Usage Service`, `Insight Service`, or `Alert Service` directly from the top dropdown.
 
 ### 2. Prometheus & Grafana Monitoring Pipeline
-- **Prometheus Scrape Targets**: [http://localhost:9090/targets](http://localhost:9090/targets) (automatically scrapes `/actuator/prometheus` across every microservice port).
+- **Prometheus Scrape Targets**: [http://localhost:9090/targets](http://localhost:9090/targets) (automatically scrapes `/actuator/prometheus` across every microservice port `8080-8086`).
 - **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (`admin` / `admin`). Pre-provisioned datasource automatically connects to Prometheus.
 
 ---
 
 ## 📈 Git Commit History & Professional Hygiene
-This project was constructed using an atomic commit strategy with **49 Git commits** following standard Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`):
+This project was constructed using an atomic commit strategy with **57 Git commits** following standard Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`):
 ```bash
-git log --oneline
+git log --oneline | Measure-Object -Line
 ```
-Every commit represents a self-contained, buildable increment of domain entities, JPA repositories, Kafka event handlers, REST controllers, actuator configs, and Testcontainers suites.
+Every commit represents a self-contained, buildable increment of domain entities, JPA repositories, Kafka event handlers, REST controllers, actuator configs, and Testcontainers suites across a 9-phase enterprise engineering roadmap.
