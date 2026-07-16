@@ -1,32 +1,166 @@
-# React + TypeScript + Vite
+# 🎨 Home Energy Tracker — Enterprise React 19 Glassmorphic Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+[![React](https://img.shields.io/badge/React-19.0.0-61DAFB.svg?style=flat-square&logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6.2.0-646CFF.svg?style=flat-square&logo=vite)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7.2-3178C6.svg?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Lucide Icons](https://img.shields.io/badge/Lucide_Icons-0.475.0-F56565.svg?style=flat-square)](https://lucide.dev/)
+[![Keycloak OIDC](https://img.shields.io/badge/Keycloak-OAuth2%20%2F%20OIDC-00B4D8.svg?style=flat-square&logo=keycloak)](https://www.keycloak.org/)
+[![Docker & Nginx](https://img.shields.io/badge/Docker-Multi--Stage%20Nginx-2496ED.svg?style=flat-square&logo=docker)](https://www.docker.com/)
 
-Currently, two official plugins are available:
+A state-of-the-art Single Page Application (SPA) built with **Vite, React 19, and TypeScript**, providing a dynamic, glassmorphic UI (`#0b0f19` dark canvas with `#00f2fe` neon cyan accents and `#10b981` emerald status highlights) to monitor and control the **Home Energy Tracker Spring Boot 4 / Java 21 Microservices Platform**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🏗 Frontend Architecture & Component Topology
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```mermaid
+graph TD
+    UI["💻 Browser / User (:5173 / :80)"] --> APP["App.tsx (State Orchestrator & Tab Router)"]
+    APP --> NAV["Navbar.tsx (Navigation & Keycloak Status Indicator)"]
+    APP --> MODAL["TokenModal.tsx (Keycloak OIDC JWT Manager)"]
+    
+    APP --> TAB1["SystemOverview.tsx (Cluster Diagnostic & Port Grid)"]
+    APP --> TAB2["DeviceManager.tsx (IoT Controller & Kafka Telemetry Burst)"]
+    APP --> TAB3["AnalyticsCenter.tsx (Time-Series Charts & Alert Feed)"]
+    APP --> TAB4["AiAdvisor.tsx (Spring AI + Ollama Diagnostic Prompting)"]
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+    MODAL -->|POST /protocol/openid-connect/token| KC["🔐 Keycloak Container (:8091)"]
+    TAB1 & TAB2 & TAB3 & TAB4 -->|Bearer Access Token| GW["🌐 Spring Cloud Gateway (:8080)"]
+    TAB4 -->|Optional Local LLM| OLLAMA["🧠 Local Ollama Daemon (:11434)"]
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+### Core Features & UI Components
+
+1. **Integrated Keycloak OAuth2 / OIDC Token Manager (`TokenModal.tsx`)**:
+   - Connects to your local Keycloak container (`het-security-realm` on port `:8091`).
+   - Supports one-click **Quick Auto-Acquisition** (`admin / admin` credentials against `energy-tracker-client`) via `POST http://localhost:8091/realms/het-security-realm/protocol/openid-connect/token`.
+   - Stores JWT `access_token` globally across all dashboard cards and injects `Authorization: Bearer <token>` headers into downstream requests to Spring Cloud Gateway (`:8080`).
+
+2. **Cluster Diagnostic & Health Overview (`SystemOverview.tsx`)**:
+   - Live Actuator health poller querying `/actuator/health` across the Gateway and downstream endpoints.
+   - Diagnostic status cards for all 7 Spring Boot microservices (`api-gateway`, `user-service`, `device-service`, `ingestion-service`, `usage-service`, `alert-service`, `insight-service`) and 5 observability tools (`Keycloak`, `MySQL`, `Apache Kafka`, `Prometheus`, `Grafana`).
+
+3. **IoT Inventory & High-Throughput Simulation Controller (`DeviceManager.tsx`)**:
+   - Interactive control panel for household smart appliances (`HVAC`, `SOLAR`, `INDUCTION`, `EV_CHARGER`, `LIGHTING`).
+   - Includes one-click **"Trigger Telemetry Simulation Burst"** dispatching HTTP requests to `POST /api/v1/ingestion/simulate`, generating multi-threaded parallel event bursts across Apache Kafka (`energy-usage-events`).
+
+4. **Time-Series Analytics & Alerting Audit Center (`AnalyticsCenter.tsx`)**:
+   - Dynamic consumption visualizations (`kWh` bars) across peak and off-peak tariff tiers (`$0.12/kWh` vs `$0.28/kWh`).
+   - Live audit feed tracking real-time threshold breaches generated by `alert-service` (`alert-events` topic -> MySQL -> Mailpit SMTP notifications on port `:8025`).
+
+5. **Local Ollama LLM Advisory Interface (`AiAdvisor.tsx`)**:
+   - Interactive diagnostic chat interface powered by Spring AI (`insight-service` on port `:8085`).
+   - Queries your local Ollama instance (`llama3` / `mistral`) for concrete dollar-saving recommendations, peak shift optimization, and HVAC scheduling adjustments.
+   - Gracefully handles offline Ollama daemons (`⚠️ Ollama Connection Notice`) while maintaining simulated diagnostic suggestions.
+
+---
+
+## 🚀 Step-by-Step Local Development Guide (`npm run dev`)
+
+Follow this step-by-step procedure to run the React dashboard locally in development mode with **Hot Module Replacement (HMR)**:
+
+### Step 1: Ensure Backend Infrastructure & Microservices are Running
+Before starting the web UI, ensure your backend infrastructure is active:
+```powershell
+# From the project root directory
+docker-compose up -d
+```
+*(Verify all 8 containers (`mysql`, `kafka`, `kafka-ui`, `influxdb`, `mailpit`, `keycloak`, `prometheus`, `grafana`) are `Up` and `Healthy`.)*
+
+If you wish to test live API calls (`:8080`), launch the Spring Cloud Gateway:
+```powershell
+mvn spring-boot:run -pl :api-gateway
+```
+
+### Step 2: Install Node.js Dependencies
+Navigate into the `frontend/` folder and install all locked dependencies using NPM:
+```powershell
+cd frontend
+npm ci
+```
+
+### Step 3: Launch the Vite Development Server
+Start the local Vite dev server with host binding:
+```powershell
+npm run dev -- --host
+```
+You will see output similar to:
+```
+  VITE v8.1.5  ready in 940 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://192.168.1.xxx:5173/
+```
+
+### Step 4: Open Browser & Acquire Keycloak Token
+1. Open **[http://localhost:5173](http://localhost:5173)** in your browser.
+2. Look at the top navigation bar and click **"Connect Keycloak Token"** (or the shield button on the right).
+3. Inside the modal (`Realm: het-security-realm | Client: energy-tracker-client`), click **"Quick Auto-Acquisition (`admin / admin`)"**.
+4. A green notification banner will confirm:
+   ✅ **`Successfully generated Keycloak JWT token for admin user! Protected API calls (:8080) are now unlocked.`**
+5. Close the modal and navigate across all 4 dashboard views!
+
+---
+
+## 🐳 Step-by-Step Production Docker & Reverse Proxy Guide
+
+To serve the frontend via a high-performance **Nginx Reverse Proxy** container alongside all 7 Java microservices, we use our multi-stage `Dockerfile` and master orchestration manifest `docker-compose.prod.yml`.
+
+### Multi-Stage Build Architecture (`frontend/Dockerfile`)
+- **Stage 1 (`node:22-alpine` builder)**: Installs exact dependencies via `npm ci` and compiles the production bundle (`npm run build`). Results in an optimized `dist/` directory (`index.html ~0.45 kB`, `JS bundle ~236 kB`).
+- **Stage 2 (`nginx:alpine` runner)**: Copies the compiled `dist/` assets to `/usr/share/nginx/html` and applies `nginx.conf`.
+
+### Nginx Reverse Proxy Mechanics (`frontend/nginx.conf`)
+- **SPA Routing (`try_files $uri $uri/ /index.html`)**: Ensures direct page refreshes and deep links route cleanly to React Router / App handler.
+- **Downstream API Reverse Proxying**: Routes `/api/v1/*` directly to `http://api-gateway:8080/api/v1/*` inside the Docker network (`het-network`).
+- **Security & Performance**: Enables Gzip compression for `text/css`, `application/javascript`, and `application/json`.
+
+### Executing the Production Deployment
+From the project root directory (`home-energy-tracker-7-insight-service`):
+
+1. **Compile all Java Microservice JARs**:
+   ```powershell
+   mvn clean package -DskipTests=true
+   ```
+2. **Launch the Master Production Manifest**:
+   ```powershell
+   docker-compose -f docker-compose.prod.yml up --build -d
+   ```
+3. **Access Your Production Stack**:
+   - **Frontend UI**: [http://localhost:80](http://localhost:80) (and [http://localhost:3001](http://localhost:3001))
+   - **API Gateway**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+   - **Keycloak Admin Console**: [http://localhost:8091](http://localhost:8091) (`admin` / `admin`)
+   - **Kafka UI**: [http://localhost:8070](http://localhost:8070)
+   - **Grafana Dashboards**: [http://localhost:3000](http://localhost:3000) (`admin` / `admin`)
+   - **Mailpit SMTP & Web Inbox**: [http://localhost:8025](http://localhost:8025)
+
+---
+
+## 🛠 Available Scripts
+
+Inside the `frontend/` package, you can run:
+
+| Command | Action |
+| :--- | :--- |
+| `npm run dev` | Starts Vite local development server with HMR on port `:5173`. |
+| `npm run build` | Compiles TypeScript (`tsc -b`) and bundles production static assets via Vite (`dist/`). |
+| `npm run lint` | Runs `oxlint` high-speed linter to check React and TypeScript rules. |
+| `npm run preview` | Spins up a local static server on port `:4173` to preview the compiled `dist/` folder. |
+
+---
+
+## 🔐 Security & CORS Mechanics
+
+To allow the frontend SPA (`http://localhost:5173` or `http://localhost:80`) to securely access the Spring Cloud Gateway (`http://localhost:8080`), global CORS and preflight handling (`OPTIONS`) are explicitly configured in the API Gateway (`SecurityConfig.java`):
+- `corsConfiguration.setAllowedOriginPatterns(List.of("*"))`
+- `corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"))`
+- `corsConfiguration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"))`
+- `corsConfiguration.setAllowCredentials(true)`
+
+All downstream requests originating from the React UI carry the Keycloak OIDC `access_token` in the HTTP header:
+```http
+GET /api/v1/device/all HTTP/1.1
+Host: localhost:8080
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI...
+```
+The API Gateway validates the JWT signature against Keycloak's JWK set endpoint before routing requests to `device-service`, `user-service`, or `ingestion-service`.
