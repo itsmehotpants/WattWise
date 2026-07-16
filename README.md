@@ -12,6 +12,9 @@ An enterprise-grade, distributed IoT energy tracking and AI recommendations plat
 
 ## 🏗 System Architecture & Services Overview
 
+![Full Microservices Flow Diagram](diagrams/full-microservices-flow-diagram-with-components.png)
+![Background and Requirements](diagrams/background-and-requirements.png)
+
 ```mermaid
 graph TD
     User["👥 Client / Postman"] -->|OAuth2 / Bearer Token| GW["🌐 API Gateway (:8080)"]
@@ -92,6 +95,9 @@ Every microservice includes dedicated Testcontainers integration tests that spin
 
 ## 🔐 Keycloak Security & Authentication Workflow
 
+![API Gateway & Public Network](diagrams/diagram-showing-gateway-in-public-network.png)
+![Circuit Breaker in API Gateway](diagrams/circuit-breaker-in-api-gateway.png)
+
 The API Gateway (`http://localhost:8080`) secures all downstream routes using **OAuth2 / OpenID Connect (OIDC)** tokens issued by Keycloak (`http://localhost:8091`).
 
 ### Generating an Access Token via Postman / cURL
@@ -112,6 +118,8 @@ Copy the returned `access_token` and use it in your requests via `Authorization:
 
 ## 📊 Unified OpenAPI / Swagger UI & Observability
 
+![Observability with Prometheus and Grafana](diagrams/observability-with-prometheus-and-grafana.png)
+
 ### 1. Unified Swagger UI Aggregator (API Gateway)
 Access all 6 microservice REST APIs from a single interactive interface:
 - **Unified Swagger Dashboard**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
@@ -124,8 +132,8 @@ Access all 6 microservice REST APIs from a single interactive interface:
 ---
 
 ## 📈 Git Commit History & Professional Hygiene
-This project was constructed using an atomic commit strategy with **57 Git commits** following standard Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`):
+This project was constructed using an atomic commit strategy with **58 Git commits** following standard Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`):
 ```bash
-git log --oneline | Measure-Object -Line
+git log --oneline
 ```
-Every commit represents a self-contained, buildable increment of domain entities, JPA repositories, Kafka event handlers, REST controllers, actuator configs, and Testcontainers suites across a 9-phase enterprise engineering roadmap.
+Every commit represents a self-contained, buildable increment of domain entities, JPA repositories, Kafka event handlers, REST controllers, actuator configs, Testcontainers suites, and architectural diagrams across a 9-phase enterprise engineering roadmap.
