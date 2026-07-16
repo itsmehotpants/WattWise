@@ -32,8 +32,8 @@ export const TokenModal: React.FC<TokenModalProps> = ({
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          client_id: 'het-gateway-client',
-          client_secret: 'het-gateway-secret',
+          client_id: 'energy-tracker-client',
+          client_secret: 'energy-tracker-secret',
           username: 'admin',
           password: 'admin',
           grant_type: 'password',
@@ -98,7 +98,7 @@ export const TokenModal: React.FC<TokenModalProps> = ({
           </div>
           <div>
             <h2 style={{ fontSize: '1.4rem', color: '#fff' }}>Keycloak OAuth2 / OIDC Token Manager</h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Realm: <strong style={{ color: '#00f2fe' }}>het-security-realm</strong> | Client: <strong style={{ color: '#00f2fe' }}>het-gateway-client</strong></p>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Realm: <strong style={{ color: '#00f2fe' }}>het-security-realm</strong> | Client: <strong style={{ color: '#00f2fe' }}>energy-tracker-client</strong></p>
           </div>
         </div>
 
